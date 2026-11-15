@@ -1,0 +1,70 @@
+diff --git a/node_modules/expo-audio/android/src/main/java/expo/modules/audio/AudioPlayer.kt b/node_modules/expo-audio/android/src/main/java/expo/modules/audio/AudioPlayer.kt
+index fb2d0b5..162a512 100644
+--- a/node_modules/expo-audio/android/src/main/java/expo/modules/audio/AudioPlayer.kt
++++ b/node_modules/expo-audio/android/src/main/java/expo/modules/audio/AudioPlayer.kt
+@@ -69,6 +69,22 @@ class AudioPlayer(
+   override var mediaSession: MediaSession = buildBasicMediaSession(context, ref) { requestPlay() }
+   override val serviceConnection = AudioPlaybackServiceConnection(WeakReference(this), appContext)
+ 
++  // PATCH (mediaplayer): bildiriş/kilid ekranındakı "növbəti/əvvəlki" düymələri tək pleyer üçün də aktivdir.
++  // Düymə basılanda JS-ə "remoteNextTrack" / "remotePreviousTrack" hadisəsi göndərilir, növbəni JS idarə edir.
++  override val supportsNextTrack: Boolean
++    get() = true
++
++  override val supportsPreviousTrack: Boolean
++    get() = true
++
++  override fun nextTrack() {
++    emit("remoteNextTrack")
++  }
++
++  override fun previousTrack() {
++    emit("remotePreviousTrack")
++  }
++
+   override val isLive: Boolean
+     get() = ref.isCurrentMediaItemLive
+ 
+diff --git a/node_modules/expo-audio/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt b/node_modules/expo-audio/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
+index 53c36f7..bbe77f6 100644
+--- a/node_modules/expo-audio/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
++++ b/node_modules/expo-audio/android/src/main/java/expo/modules/audio/service/AudioControlsService.kt
+@@ -424,8 +424,38 @@ class AudioControlsService : MediaSessionService() {
+         if (isLive) {
+           commands.remove(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)
+         }
++        // PATCH (mediaplayer): tək ExoPlayer-də növbəti/əvvəlki element olmur və Media3 bu əmrləri silir.
++        // JS növbəni idarə etdiyi üçün onları məcburi əlavə edib basılanda JS hadisəsinə yönləndiririk.
++        if (playable.supportsNextTrack) {
++          commands.add(Player.COMMAND_SEEK_TO_NEXT)
++          commands.add(Player.COMMAND_SEEK_TO_NEXT_MEDIA_ITEM)
++        }
++        if (playable.supportsPreviousTrack) {
++          commands.add(Player.COMMAND_SEEK_TO_PREVIOUS)
++          commands.add(Player.COMMAND_SEEK_TO_PREVIOUS_MEDIA_ITEM)
++        }
+         return commands.build()
+       }
++
++      override fun isCommandAvailable(command: Int): Boolean = availableCommands.contains(command)
++
++      override fun hasNextMediaItem(): Boolean = playable.supportsNextTrack || super.hasNextMediaItem()
++
++      override fun seekToNext() {
++        if (playable.supportsNextTrack) playable.nextTrack() else super.seekToNext()
++      }
++
++      override fun seekToNextMediaItem() {
++        if (playable.supportsNextTrack) playable.nextTrack() else super.seekToNextMediaItem()
++      }
++
++      override fun seekToPrevious() {
++        if (playable.supportsPreviousTrack) playable.previousTrack() else super.seekToPrevious()
++      }
++
++      override fun seekToPreviousMediaItem() {
++        if (playable.supportsPreviousTrack) playable.previousTrack() else super.seekToPreviousMediaItem()
++      }
+     }
+   }
+ 
