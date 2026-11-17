@@ -15,8 +15,6 @@ import { coverUriFor } from './covers';
 import { recordPlay } from './stats';
 import type { MediaItem } from './types';
 
-const dbg = (m: string) => { fetch('http://192.168.100.9:9999/?m=' + encodeURIComponent(m)).catch(() => {}); };
-
 export type RepeatMode = 'off' | 'all' | 'one';
 
 // Bildiriş / kilid ekranı: növbəti / əvvəlki mahnı düymələri (native düzəliş: patches/expo-audio+*.patch)
@@ -140,7 +138,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
       if (!item) return;
       setQueue(q);
       setIndex(i);
-      dbg('LOAD i=' + i + ' ' + item.title);
       player.replace({ uri: item.uri });
       setLockMeta({ title: item.title, artist: item.artist });
       player.play();
@@ -225,7 +222,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const jumpTo = useCallback((i: number) => load(queue, i), [load, queue]);
 
   const next = useCallback(() => {
-    dbg('NEXT called index=' + index);
     if (queue.length === 0) return;
     if (shuffle && queue.length > 1) {
       let r = index;
@@ -293,7 +289,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
   const lastRemote = useRef(0);
   const once = (fn: () => void) => () => {
     const now = Date.now();
-    dbg('REMOTE event dt=' + (now - lastRemote.current));
     if (now - lastRemote.current < 300) return;
     lastRemote.current = now;
     fn();
@@ -317,7 +312,6 @@ export function PlayerProvider({ children }: { children: ReactNode }) {
     }
     if (handled.current) return;
     handled.current = true;
-    dbg('FINISHED -> next, cur=' + index);
     if (sleep === 'track') {
       setSleepState(null);
       return;
